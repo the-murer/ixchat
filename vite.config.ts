@@ -1,7 +1,16 @@
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
+/** @type {import('vite').UserConfig} */
+import { defineConfig, loadEnv } from 'vite';
+import dotenv from 'dotenv'; 
 
-// https://vitejs.dev/config/
-export default defineConfig({
-  plugins: [react()],
+dotenv.config(); 
+
+export default defineConfig(({  mode }) => {
+  
+  const env = loadEnv(mode, process.cwd(), '')
+  return {
+    define: { 
+      __APP_ENV__: JSON.stringify(env.APP_ENV),
+      __API_URL__: JSON.stringify(env.API_URL),
+    },
+  }
 })
