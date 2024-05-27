@@ -12,9 +12,8 @@ export default function Register() {
 
     const { registerUser } = useAuth();
 
-    const submit = (e: FormEvent<HTMLFormElement>) => {
+    const submit = async (e: FormEvent<HTMLFormElement>) => {
 
-        console.log("🚀 ~ submit ~ email, password:", email, password)
         if (password !== confirmPassword) {
             setError("As senhas devem ser iguais");
             return;
