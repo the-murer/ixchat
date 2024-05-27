@@ -23,7 +23,13 @@ const getChats = async (userId: string) => {
     return response.data;
 };
 
-function Chats({ createChat, onlineUsers, notifications }) {
+interface ChatsProps {
+  createChat: (arg: any, arg2: any) => void;
+  onlineUsers: any[];
+  notifications: any[];
+}
+
+function Chats({ createChat, onlineUsers, notifications }: ChatsProps) {
     const userId = localStorage.getItem("userId")
     const [chats, setChats] = useState([]);
     const [users, setUsers] = useState([]);

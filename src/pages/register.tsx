@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Form, Col, Container } from "react-bootstrap";
 import { useAuth } from "../contexts/auth_context";
 import { FormEvent, useState } from "react";
@@ -24,7 +25,7 @@ export default function Register() {
             return;
         }
         try{
-            await registerUser(e,{ name, email, password });
+            await registerUser(e,{ name, email, password } as any);
             window.location.reload();
         } catch (error) {
             if (error instanceof Error) {

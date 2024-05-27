@@ -16,7 +16,7 @@ const getMessages = async (chatId: string) => {
 
 const ChatInterface = () => {
   const [activeChat, setChat] = useState('');  
-  const userId = localStorage.getItem("userId");
+  const userId = localStorage.getItem("userId") as string;
   const [chatUser, setUser] = useState({} as any);
   const [socket, setSocket] = useState({} as any);
   const [onlineUsers, setOnlineUsers] = useState([]);

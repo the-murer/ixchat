@@ -28,7 +28,7 @@ interface MessageListProps {
 
 const MessageList: React.FC<MessageListProps> = ({ messages, userId, handleSendMessage, chatUser, onlineUsers }) => {
   const [input, setInput] = useState("");
-  const messagesEndRef = useRef(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
     if (messagesEndRef.current) {
