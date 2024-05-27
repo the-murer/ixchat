@@ -16,8 +16,11 @@ export default function Login() {
             await login(e,{ email, password });
             window.location.reload();
         } catch (error) {
-            console.error(error);
-            setError(error.message)
+            if (error instanceof Error) {
+                setError(error.message);
+              } else {
+                console.error('Erro desconhecido', error);
+              }
         }
     };
 

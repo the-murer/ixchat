@@ -69,7 +69,7 @@ const AuthContextProvider: React.FC<AuthContextProviderProps> = ({ children }): 
       try {
         const response: AxiosResponse<User> = await axios.post(`${apiUrl}/users/login`, loginInfo);
         const userId = response.data._id;
-        console.log("🚀 ~ userId:", response.data)
+
         localStorage.setItem("userId", userId);
         setUser(response.data);
       } catch (error) {

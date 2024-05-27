@@ -1,7 +1,17 @@
 import moment from 'moment';
 import React from 'react';
 
-const Message = ({ message, userId }) => {
+interface MessageProps {
+  message: {
+    _id: string;
+    content: string;
+    createdAt: string;
+    userId: string;
+  };
+  userId: string;
+}
+
+const Message: React.FC<MessageProps> = ({ message, userId }) => {
   const userSended = message.userId === userId;
   return (
     <div style={{ textAlign: userSended ? "right" : "left", margin: "8px" }}>

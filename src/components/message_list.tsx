@@ -1,10 +1,32 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useRef, useState } from "react";
 import { TextField, Button, Container, Grid } from "@mui/material";
 import { FaCircle } from "react-icons/fa";
 
 import Message from "./messages";
 
-const MessageList = ({ messages, userId, handleSendMessage, chatUser, onlineUsers }) => {
+interface Message {
+    _id: string;
+    content: string;
+    createdAt: string;
+    userId: string;
+}
+
+interface User {
+  _id: string;
+  name: string;
+  email: string;
+}
+
+interface MessageListProps {
+  messages: Message[];
+  userId: string;
+  handleSendMessage: (message: string) => void; // ajuste conforme necessário
+  chatUser: User;
+  onlineUsers: User[];
+}
+
+const MessageList: React.FC<MessageListProps> = ({ messages, userId, handleSendMessage, chatUser, onlineUsers }) => {
   const [input, setInput] = useState("");
   const messagesEndRef = useRef(null);
 
@@ -18,7 +40,7 @@ const MessageList = ({ messages, userId, handleSendMessage, chatUser, onlineUser
     scrollToBottom();
   }, [messages]);
 
-  const handleKeyPress = (e) => {
+  const handleKeyPress = (e: any) => {
     if (e.key === "Enter") {
       handleSendMessage(input);
       setInput("");
@@ -32,7 +54,7 @@ const MessageList = ({ messages, userId, handleSendMessage, chatUser, onlineUser
       </Container>
     );
   }
-  const online = onlineUsers.map(o => o.userId).includes(chatUser._id)
+  const online = onlineUsers.map((o: any) => o.userId).includes(chatUser._id)
   return (
     <Container className="sm-9">
       <h2>
@@ -44,7 +66,7 @@ const MessageList = ({ messages, userId, handleSendMessage, chatUser, onlineUser
       </h2>
       <hr />
       <div style={{ height: '60vh', overflow: 'scroll' }}>
-        {messages.map((message) => (
+        {messages.map((message: Message) => (
           <div
             style={{
               display: "flex",

@@ -18,12 +18,19 @@ export default function Register() {
             setError("As senhas devem ser iguais");
             return;
         }
+        if (!name || !email || !password) {
+            setError("Informações faltantes, verifique!");
+            return;
+        }
         try{
             await registerUser(e,{ name, email, password });
             window.location.reload();
         } catch (error) {
-            console.error(error);
-            setError(error.message)
+            if (error instanceof Error) {
+                setError(error.message);
+              } else {
+                console.error('Erro desconhecido', error);
+              }
         }
     };
 

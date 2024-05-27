@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useState } from "react";
 import { Container } from "@mui/material";
 import axios from "axios";
@@ -8,20 +9,20 @@ import Chats from "../components/chats_list";
 import MessageList from "../components/message_list";
 import { apiUrl, socketUrl } from "../contexts/auth_context";
 
-const getMessages = async (chatId) => {
+const getMessages = async (chatId: string) => {
   const response = await axios.get(`${apiUrl}/messages/${chatId}`);
   return response.data;
 }
 
 const ChatInterface = () => {
-  const [chatUser, setUser] = useState({});
-  const [messages, setMessages] = useState([]);
-  const [onlineUsers, setOnlineUsers] = useState([]);
-  const [notifications, setNotifications] = useState([]);
   const [activeChat, setChat] = useState('');  
-  const [lastMessage, setLastMessage] = useState(null);
-  const [socket, setSocket] = useState(null);
   const userId = localStorage.getItem("userId");
+  const [chatUser, setUser] = useState({} as any);
+  const [socket, setSocket] = useState({} as any);
+  const [onlineUsers, setOnlineUsers] = useState([]);
+  const [messages, setMessages] = useState([{} as any]);
+  const [lastMessage, setLastMessage] = useState({} as any);
+  const [notifications, setNotifications] = useState([{} as any]);
 
   useEffect(() => {
     const socketInstance = io(socketUrl);
@@ -36,10 +37,10 @@ const ChatInterface = () => {
   }, []);
 
   useEffect(() => {
-    if (!socket) return;
+    if (!socket?.connected) return;
 
     socket.emit("addNewUser", userId);
-    socket.on("getUsers", (users) => { setOnlineUsers(users); });
+    socket.on("getUsers", (users: any) => { setOnlineUsers(users); });
 
     return () => {
       socket.off("getUsers");
@@ -47,25 +48,23 @@ const ChatInterface = () => {
   }, [socket, userId]);
 
   useEffect(() => {
-    if (!socket || !lastMessage) return;
+    if (!socket?.connected || !lastMessage) return;
 
     socket.emit("sendMessage", { ...lastMessage, receiverId: chatUser._id });
   }, [lastMessage, socket, chatUser]);
 
   useEffect(() => {
-    if (!socket) return;
+    if (!socket?.connected) return;
 
-    socket.on("getMessage", (message) => {
+    socket.on("getMessage", (message: any) => {
       if (activeChat === message.chatId) {
         setMessages((prev) => [...prev, message]);
       }
     });
 
-    socket.on("getNotification", (notification) => {
-      console.log("🚀 ~ socket.on ~ notification:", notification)
-      const isChatOpen = chatUser._id === notification.senderId;
-
-      if (isChatOpen) {
+    socket.on("getNotification", (notification : any) => {
+    
+      if (chatUser._id === notification.senderId) {
         setNotifications((prev) => [{ ...notification, isRead: true }, ...prev]);
       } else {
         setNotifications((prev) => [notification, ...prev]);
@@ -78,11 +77,11 @@ const ChatInterface = () => {
     };
   }, [socket, activeChat, chatUser]);
 
-  const createChat = async (user, chats) => {
+  const createChat = async (user: any, chats: any) => {
     if (!user) return;
     const receiverId = user._id;
     if (userId && chats.length > 0) {
-      const existingChat = chats.find(chat => chat.participants.includes(receiverId));
+      const existingChat = chats.find((chat: any) => chat.participants.includes(receiverId));
       if (existingChat) {
         const messages = await getMessages(existingChat._id);
         if (notifications.length > 0) {
@@ -107,7 +106,7 @@ const ChatInterface = () => {
     }
   };
 
-  const handleSendMessage = async (message) => {
+  const handleSendMessage = async (message: any) => {
     const messageObj = { chatId: activeChat, userId, content: message };
     const response = await axios.post(`${apiUrl}/messages/create`, messageObj);
 
