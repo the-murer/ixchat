@@ -16,7 +16,7 @@ const getChats = async (userId: string) => {
     return response.data;
 };
 
-function Chats({ createChat, onlineUsers }) {
+function Chats({ createChat, onlineUsers, notifications }) {
     const userId = localStorage.getItem("userId")
     const [chats, setChats] = useState([]);
     const [users, setUsers] = useState([]);
@@ -59,9 +59,15 @@ function Chats({ createChat, onlineUsers }) {
               const participantId = chat.participants.find((p) => p !== userId);
               const user = users.find((user) => user._id === participantId);
               const online = onlineUsers.map(o => o.userId).includes(participantId);
+              const newMessage = notifications.find((n) => n.chatId === chat._id)?.isRead === false; 
               return (
                 <ListGroup.Item  key={chat.id} className="list-item" style={{ display: "flex", padding: "10px", justifyContent: "space-between" }} >
-                  <h6>{online ? <FaCircle style={{ color: "green" }} /> : <FaCircle style={{ color: "gray" }} />}{` ${user.name}`}</h6>
+                  <div style={{ display: "flex", flexDirection: "column" }}>
+                    <h6>
+                      {online ? <FaCircle style={{ color: "green" }} /> : <FaCircle style={{ color: "gray" }} />}{` ${user.name}`}
+                    </h6>
+                    {newMessage ? <p>Nova(s) mensagens</p> : null}
+                  </div>
                   <Button onClick={() => createChat(user, chats)} variant="outline-primary" size="sm" style={{ marginLeft: "10px" }}>
                    Ver conversa
                  </Button>

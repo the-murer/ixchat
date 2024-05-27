@@ -17,51 +17,86 @@ const ChatInterface = () => {
   const [chatUser, setUser] = useState({});
   const [messages, setMessages] = useState([]);
   const [onlineUsers, setOnlineUsers] = useState([]);
-  const [activeChat, setChat] = useState('');
-  const [socketServer, setSocketServer] = useState('');
+  const [notifications, setNotifications] = useState([]);
+  const [activeChat, setChat] = useState('');  
+  const [lastMessage, setLastMessage] = useState(null);
+  const [socket, setSocket] = useState(null);
   const userId = localStorage.getItem("userId");
 
   useEffect(() => {
-    const socket = io(socketUrl);
+    const socketInstance = io(socketUrl);
 
-    socket.on('connect', () => { console.log('Conectado ao servidor'); });
-    setSocketServer(socket);
+    socketInstance.on('connect', () => { console.log('Conectado ao servidor'); });
+    setSocket(socketInstance);
+
     return () => {
-      socket.disconnect();
+      socketInstance.disconnect();
       console.log('Desconectado do servidor');
     };
   }, []);
 
   useEffect(() => {
-    const socket = io(socketUrl);
+    if (!socket) return;
 
-    socket.emit("addNewUser", localStorage.getItem("userId"));
-    socket.on("getUsers", (res) => {
-      console.log("🚀 ~ socketServer.on ~ res:", res)
-      setOnlineUsers(res);
-    });
+    socket.emit("addNewUser", userId);
+    socket.on("getUsers", (users) => { setOnlineUsers(users); });
 
     return () => {
       socket.off("getUsers");
     };
-  }, [socketServer]);
+  }, [socket, userId]);
+
+  useEffect(() => {
+    if (!socket || !lastMessage) return;
+
+    socket.emit("sendMessage", { ...lastMessage, receiverId: chatUser._id });
+  }, [lastMessage, socket, chatUser]);
+
+  useEffect(() => {
+    if (!socket) return;
+
+    socket.on("getMessage", (message) => {
+      if (activeChat === message.chatId) {
+        setMessages((prev) => [...prev, message]);
+      }
+    });
+
+    socket.on("getNotification", (notification) => {
+      console.log("🚀 ~ socket.on ~ notification:", notification)
+      const isChatOpen = chatUser._id === notification.senderId;
+
+      if (isChatOpen) {
+        setNotifications((prev) => [{ ...notification, isRead: true }, ...prev]);
+      } else {
+        setNotifications((prev) => [notification, ...prev]);
+      }
+    });
+
+    return () => {
+      socket.off("getMessage");
+      socket.off("getNotification");
+    };
+  }, [socket, activeChat, chatUser]);
 
   const createChat = async (user, chats) => {
     if (!user) return;
     const receiverId = user._id;
     if (userId && chats.length > 0) {
-      const exits = chats.find(chat => chat.participants.includes(receiverId));
-      if (exits) {
-        const messages = await getMessages(exits._id);
+      const existingChat = chats.find(chat => chat.participants.includes(receiverId));
+      if (existingChat) {
+        const messages = await getMessages(existingChat._id);
+        if (notifications.length > 0) {
+          setNotifications((prev) => prev.filter(notification => notification.chatId !== existingChat._id));
+        }
 
-        setChat(exits._id);
+        setChat(existingChat._id);
         setMessages(_.orderBy(messages, 'createdAt', 'asc'));
         setUser(user);
         return;
       }
     }
     try {
-      const response =await axios.post(`${apiUrl}/chats/create`, { userId, receiverId });
+      const response = await axios.post(`${apiUrl}/chats/create`, { userId, receiverId });
       const data = response.data;
       
       setMessages([]);
@@ -77,13 +112,13 @@ const ChatInterface = () => {
     const response = await axios.post(`${apiUrl}/messages/create`, messageObj);
 
     setMessages(_.orderBy([ ...messages, response.data ], 'createdAt', 'asc'));
+    setLastMessage(response.data);
   };
 
-  console.log("🚀 ~ ChatInterface ~ onlineUsers:", onlineUsers)
   return (
     <Container style={{ height: "80vh", width: "200vw", backgroundColor: "white", padding: "20px", borderRadius: "10px" }}>
       <div style={{ display: "flex", flexDirection: "row" }}>
-        <Chats onlineUsers={onlineUsers} createChat={createChat} />
+        <Chats notifications={notifications} onlineUsers={onlineUsers} createChat={createChat} />
         <MessageList
          key={activeChat}
          messages={messages} 
