@@ -9,11 +9,12 @@ export default function Login() {
     const [error, setError] = useState("");
     const { login } = useAuth();
 
-    const submit = (e: FormEvent<HTMLFormElement>) => {
+    const submit = async (e: FormEvent<HTMLFormElement>) => {
 
         console.log("🚀 ~ submit ~ email, password:", email, password)
         try{
-            login(e,{ email, password });
+            await login(e,{ email, password });
+            window.location.reload();
         } catch (error) {
             console.error(error);
             setError(error.message)

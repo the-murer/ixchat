@@ -20,7 +20,8 @@ export default function Register() {
             return;
         }
         try{
-            registerUser(e,{ name, email, password });
+            await registerUser(e,{ name, email, password });
+            window.location.reload();
         } catch (error) {
             console.error(error);
             setError(error.message)
