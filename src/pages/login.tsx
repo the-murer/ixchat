@@ -1,7 +1,8 @@
-import { Button, Form, Col, Container } from "react-bootstrap";
+import { Form, Col, Container } from "react-bootstrap";
 import {  FormEvent, useState } from "react";
 
 import { useAuth } from "../contexts/auth_context.tsx";
+import { Button, Grid, Link } from "@mui/material";
 
 export default function Login() {
     const [email, setEmail] = useState("");
@@ -25,9 +26,9 @@ export default function Login() {
     };
 
     return (
-        <Container style={{ maxWidth: "500px", backgroundColor: "gray", padding: "20px", borderRadius: "10px" }} className="sm-6">
+        <Container style={{ maxWidth: "500px", backgroundColor: "white", padding: "20px", borderRadius: "10px" }} className="sm-6">
             <Col>
-                <h1 className="text-center text-light">Login</h1>
+                <h1 className="text-center text-dark">Login</h1>
                 <Form onSubmit={submit}>
                     <Form.Group controlId="formBasicEmail">
                         <Form.Label className="text-light">Email</Form.Label>
@@ -39,15 +40,19 @@ export default function Login() {
                         <Form.Control type="password" placeholder="Senha" value={password} onChange={(e) => setPassword(e.target.value)} />
                     <br />
                     </Form.Group>
-                    <Button variant="primary" type="submit">
-                        Fazer login
+                    <Button type="submit" fullWidth variant="contained" sx={{ mt: 3, mb: 2 }}>
+                      Fazer login
                     </Button>
                     {error !== '' ? <p className="text-danger">{error}</p> : null}
                 </Form>
                 <br />
-                <p className="text-light">Não tem uma conta? 
-                    <a style={{ backgroundColor: "black", padding: "10px", borderRadius: "10px"}} href="/register">Criar uma conta</a>
-                </p>
+                <Grid container>
+                    <Grid item>
+                      <Link href="/registrar" variant="body2">
+                        {"Não tem uma conta? Cadastre-se"}
+                      </Link>
+                    </Grid>
+                </Grid>
             </Col>
         </Container>
     );

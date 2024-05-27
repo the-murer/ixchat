@@ -28,7 +28,8 @@ const App: React.FC = () => {
   if (!authenticated) {
     return(
       
-    <AuthContextProvider>
+      <div style={{ backgroundColor: "#222244", height: "100vh" }}>
+      <AuthContextProvider>
       <Container className="p-3">
         <Routes>
           <Route path="/" element={<Login />} />
@@ -36,6 +37,7 @@ const App: React.FC = () => {
         </Routes>
       </Container>
     </AuthContextProvider>
+    </div>
       ) 
   }
 

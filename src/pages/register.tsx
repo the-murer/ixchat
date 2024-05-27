@@ -1,6 +1,7 @@
-import { Button, Form, Col, Container } from "react-bootstrap";
+import { Form, Col, Container } from "react-bootstrap";
 import { useAuth } from "../contexts/auth_context";
 import { FormEvent, useState } from "react";
+import { Button } from "@mui/material";
 
 
 export default function Register() {
@@ -13,8 +14,8 @@ export default function Register() {
     const { registerUser } = useAuth();
 
     const submit = async (e: FormEvent<HTMLFormElement>) => {
-
-        if (password !== confirmPassword) {
+        e.preventDefault();
+        if (password !== confirmPassword) {            
             setError("As senhas devem ser iguais");
             return;
         }
@@ -35,38 +36,37 @@ export default function Register() {
     };
 
     return (
-        <Container style={{maxWidth: "500px", backgroundColor: "gray", padding: "20px", borderRadius: "10px" }} className="sm-6">
+        <Container style={{maxWidth: "500px", backgroundColor: "white", padding: "20px", borderRadius: "10px" }} className="sm-6">
             <Col>
-                    <h1 className="text-center text-light">Criar conta</h1>
-                    <Form onSubmit={submit}>
-                        <Form.Group controlId="name">
-                            <Form.Label className="text-light">Nome</Form.Label>
-                            <Form.Control type="name" placeholder="Nome" value={name} onChange={(e) => setName(e.target.value)} />
+                <h1 className="text-center text-dark">Criar conta</h1>
+                <Form onSubmit={submit}>
+                    <Form.Group controlId="name">
+                        <Form.Label className="text-light">Nome</Form.Label>
+                        <Form.Control type="name" placeholder="Nome" value={name} onChange={(e) => setName(e.target.value)} />
+                    </Form.Group>
+                    <br />
+                    <Form.Group controlId="email">
+                        <Form.Label className="text-light">Email</Form.Label>
+                        <Form.Control type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
+                    </Form.Group>
+                    <br />
+                    <div style={{ display: "flex", flexDirection: "row" }}>
+                        <Form.Group controlId="password">
+                            <Form.Label className="text-light">Senha</Form.Label>
+                            <Form.Control type="password" placeholder="Senha" value={password} onChange={(e) => setPassword(e.target.value)} />
                         </Form.Group>
-                        <br />
-                        <Form.Group controlId="email">
-                            <Form.Label className="text-light">Email</Form.Label>
-                            <Form.Control type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
+                        <Form.Group style={{ marginLeft: "10px" }} controlId="confirmPassword">
+                            <Form.Label className="text-light">Confirmar senha</Form.Label>
+                            <Form.Control type="password" placeholder="Senha" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
                         </Form.Group>
-                        <br />
-                        <div style={{ display: "flex", flexDirection: "row" }}>
-                            <Form.Group controlId="password">
-                                <Form.Label className="text-light">Senha</Form.Label>
-                                <Form.Control type="password" placeholder="Senha" value={password} onChange={(e) => setPassword(e.target.value)} />
-                            </Form.Group>
-                            <Form.Group style={{ marginLeft: "10px" }} controlId="confirmPassword">
-                                <Form.Label className="text-light">Confirmar senha</Form.Label>
-                                <Form.Control type="password" placeholder="Senha" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
-                            </Form.Group>
-                        </div>
-                        <br />
-                        <Button variant="primary" type="submit">
-                            Cadastrar
-                        </Button>
-                        <br />
-
-                        {error !== '' ? <p className="text-danger">{error}</p> : null}
-                    </Form>
+                    </div>
+                    <br />
+                    <Button type="submit" fullWidth variant="contained" sx={{ mt: 3, mb: 2 }}>
+                      Cadastrar
+                    </Button>
+                    <br />
+                    {error !== '' ? <p className="text-danger">{error}</p> : null}
+                </Form>
             </Col>
         </Container>
     );
