@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { createContext, useCallback, useState, useEffect, ReactNode, FormEvent, useContext } from "react";
 import axios, { AxiosResponse } from "axios";
 
@@ -12,12 +13,6 @@ interface User {
   _id: string;
   name: string;
   email: string;
-}
-
-interface Register {
-  name: string;
-  email: string;
-  password: string;
 }
 
 interface AuthContextProps {
@@ -49,10 +44,10 @@ const AuthContextProvider: React.FC<AuthContextProviderProps> = ({ children }): 
   }, []);
 
   const registerUser = useCallback(
-    async (e: FormEvent<HTMLFormElement>, registerInfo: Register) => {
+    async (e: FormEvent<HTMLFormElement>, registerInfo: any) => {
       e.preventDefault();
       try {
-        const response: AxiosResponse<User> = await axios.post(`${apiUrl}/users/register`, registerInfo);
+        const response: any = await axios.post(`${apiUrl}/users/register`, registerInfo);
         const userId = response.data._id;
         localStorage.setItem("userId", userId);
         setUser(response.data);
