@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Button, Col, ListGroup } from "react-bootstrap";
+import { FaCircle } from "react-icons/fa";
 
 import { apiUrl } from "../contexts/auth_context";
 import axios from "axios";
@@ -15,7 +16,7 @@ const getChats = async (userId: string) => {
     return response.data;
 };
 
-function Chats({ createChat }) {
+function Chats({ createChat, onlineUsers }) {
     const userId = localStorage.getItem("userId")
     const [chats, setChats] = useState([]);
     const [users, setUsers] = useState([]);
@@ -57,10 +58,10 @@ function Chats({ createChat }) {
             {showChats ? chats.map((chat) => {
               const participantId = chat.participants.find((p) => p !== userId);
               const user = users.find((user) => user._id === participantId);
-
+              const online = onlineUsers.map(o => o.userId).includes(participantId);
               return (
                 <ListGroup.Item  key={chat.id} className="list-item" style={{ display: "flex", padding: "10px", justifyContent: "space-between" }} >
-                  <h6>{user.name}</h6>
+                  <h6>{online ? <FaCircle style={{ color: "green" }} /> : <FaCircle style={{ color: "gray" }} />}{` ${user.name}`}</h6>
                   <Button onClick={() => createChat(user, chats)} variant="outline-primary" size="sm" style={{ marginLeft: "10px" }}>
                    Ver conversa
                  </Button>
@@ -69,7 +70,10 @@ function Chats({ createChat }) {
               }) :
               users.map((user) => (
                 <ListGroup.Item  key={user._id} className="list-item" style={{ display: "flex", padding: "10px", justifyContent: "space-between" }} >
-                  <h6>{user.name}</h6>
+                  <h6>
+                    {onlineUsers.map(o => o.userId).includes(user._id) ? <FaCircle style={{ color: "green" }} /> : <FaCircle style={{ color: "gray" }} />}
+                    {` ${user.name}`}
+                  </h6>
                  <Button onClick={() => createChat(user, chats)} variant="outline-primary" size="sm" style={{ marginLeft: "10px" }}>
                    Conversar
                  </Button>

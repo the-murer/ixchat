@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { TextField, Button, Container, Grid } from "@mui/material";
+import { FaCircle } from "react-icons/fa";
+
 import Message from "./messages";
 
-const MessageList = ({ messages, userId, handleSendMessage, chatUser }) => {
+const MessageList = ({ messages, userId, handleSendMessage, chatUser, onlineUsers }) => {
   const [input, setInput] = useState("");
   const messagesEndRef = useRef(null);
 
@@ -30,12 +32,18 @@ const MessageList = ({ messages, userId, handleSendMessage, chatUser }) => {
       </Container>
     );
   }
-
+  const online = onlineUsers.map(o => o.userId).includes(chatUser._id)
   return (
     <Container className="sm-9">
-      <h2>{chatUser?.name}</h2>
+      <h2>
+        {online ? <FaCircle style={{ color: "green" }} /> : <FaCircle style={{ color: "gray" }} />}
+        {chatUser?.name}
+        {online 
+        ? <h6 style={{ color: "green", marginLeft: "5px" }}>Online</h6> 
+        : <h6 style={{ color: "gray", marginLeft: "5px" }}>Offline</h6>}
+      </h2>
       <hr />
-      <div style={{ height: '65vh', overflow: 'scroll' }}>
+      <div style={{ height: '60vh', overflow: 'scroll' }}>
         {messages.map((message) => (
           <div
             style={{

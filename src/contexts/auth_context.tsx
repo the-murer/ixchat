@@ -2,6 +2,7 @@ import React, { createContext, useCallback, useState, useEffect, ReactNode, Form
 import axios, { AxiosResponse } from "axios";
 
 const apiUrl = 'http://localhost:5005';
+const socketUrl = 'http://localhost:5001';
 
 interface LoginData { email: string; password: string }
 
@@ -98,4 +99,4 @@ const useAuth = (): AuthContextProps => {
   return context;
 };
 
-export { AuthContextProvider, useAuth, apiUrl };
+export { AuthContextProvider, useAuth, apiUrl, socketUrl };
