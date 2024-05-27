@@ -1,22 +1,23 @@
+import moment from 'moment';
 import React from 'react';
 
-const Message = ({ message }) => {
+const Message = ({ message, userId }) => {
+  const userSended = message.userId === userId;
   return (
-    <div style={{ textAlign: message.isUser ? "right" : "left", margin: "8px" }}>
+    <div style={{ textAlign: userSended ? "right" : "left", margin: "8px" }}>
       <div
         style={{
-          color: message.isUser ? "#ffffff" : "#000000",
-          backgroundColor: message.isUser ? "#1186fe" : "#eaeaea",
+          color: userSended ? "#ffffff" : "#000000",
+          backgroundColor: userSended ? "#1186fe" : "#eaeaea",
           padding: "15px",
           borderRadius: "8px",
         }}
       >
-        {message.content.split("\n").map((text: string, index: string) => (
-          <React.Fragment key={index}>
-            {text}
-            <br />
-          </React.Fragment>
-        ))}
+        <React.Fragment>
+          {message.content}
+          <br />
+        <small style={{ fontSize: "11px", alignSelf: "end", right: "10px" }}>{moment(message.createdAt).format("HH:mm")}</small>
+        </React.Fragment>
       </div>
     </div>
   );

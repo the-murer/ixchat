@@ -36,9 +36,7 @@ const AuthContextProvider: React.FC<AuthContextProviderProps> = ({ children }): 
       const userId = localStorage.getItem("userId");
       if (userId) {
         try {
-          console.log("🚀 ~ fetchUser ~ userId:", userId)
           const response: AxiosResponse<User> = await axios.get(`${apiUrl}/users/get/${userId}`);
-          console.log("🚀 ~ fetchUser ~ response:", response)
           setUser(response.data);
         } catch (error) {
           console.log("🚀 ~ fetchUser ~ error:", error)

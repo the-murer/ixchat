@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Button, Card, Col, ListGroup } from "react-bootstrap";
+import { Button, Col, ListGroup } from "react-bootstrap";
 
 import { apiUrl } from "../contexts/auth_context";
 import axios from "axios";
@@ -21,12 +21,12 @@ function Chats({ createChat }) {
     const [users, setUsers] = useState([]);
     const [showChats, setChatVisualization] = useState(true);
     const [loading, setLoading] = useState(true);
-    // console.log('USUARIOS', await getUsers())
+
     useEffect(() => {
       const fetchData = async () => {
         const response = await getUsers();
         const responseChats = await getChats(userId);
-        console.log("🚀 ~ fetchData ~ responseChats:", responseChats)
+
         setUsers(response.filter((user) => user._id !== userId));
         setChats(responseChats);
         setLoading(false);
@@ -56,12 +56,12 @@ function Chats({ createChat }) {
           <ListGroup variant="flush" className="sidebar-list">
             {showChats ? chats.map((chat) => {
               const participantId = chat.participants.find((p) => p !== userId);
-              const label = users.find((user) => user._id === participantId)?.name;
+              const user = users.find((user) => user._id === participantId);
 
               return (
                 <ListGroup.Item  key={chat.id} className="list-item" style={{ display: "flex", padding: "10px", justifyContent: "space-between" }} >
-                  <h6>{label}</h6>
-                  <Button onClick={() => createChat(user._id, chats)} variant="outline-primary" size="sm" style={{ marginLeft: "10px" }}>
+                  <h6>{user.name}</h6>
+                  <Button onClick={() => createChat(user, chats)} variant="outline-primary" size="sm" style={{ marginLeft: "10px" }}>
                    Ver conversa
                  </Button>
                 </ListGroup.Item>
@@ -70,7 +70,7 @@ function Chats({ createChat }) {
               users.map((user) => (
                 <ListGroup.Item  key={user._id} className="list-item" style={{ display: "flex", padding: "10px", justifyContent: "space-between" }} >
                   <h6>{user.name}</h6>
-                 <Button onClick={() => createChat(user._id, chats)} variant="outline-primary" size="sm" style={{ marginLeft: "10px" }}>
+                 <Button onClick={() => createChat(user, chats)} variant="outline-primary" size="sm" style={{ marginLeft: "10px" }}>
                    Conversar
                  </Button>
                </ListGroup.Item>
