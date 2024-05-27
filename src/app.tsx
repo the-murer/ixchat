@@ -8,6 +8,7 @@ import NavbarComponent from "./components/navbar";
 import Register from "./pages/register";
 import { useEffect, useState } from "react";
 import { AuthContextProvider } from "./contexts/auth_context.tsx";
+import Chat from "./pages/chat.tsx";
 
 const App: React.FC = () => {
   const [authenticated, setAuthenticated] = useState(false);
@@ -39,27 +40,20 @@ const App: React.FC = () => {
   }
 
   return (
+    <div style={{ backgroundColor: "#222244", height: "100vh" }}>
     <AuthContextProvider>
-      
       <NavbarComponent />
-      <Container className="p-3">
+      <Container>
         <Routes>
-          <Route path="/" element={<Home />} />
+          <Route path="/" element={<Chat />} />
+          <Route path="/cadastrar" element={<Register />} />
         </Routes>
       </Container>
     </AuthContextProvider>
+    </div>
   );
 }
 
-function Home() {
-  return (
-    <>
-      <h1>Ola!</h1>
-      <p>
-        Placeholder
-      </p>
-    </>
-  );
-}
+
 
 export default App;

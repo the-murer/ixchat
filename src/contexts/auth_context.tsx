@@ -100,4 +100,4 @@ const useAuth = (): AuthContextProps => {
   return context;
 };
 
-export { AuthContextProvider, useAuth };
+export { AuthContextProvider, useAuth, apiUrl };
