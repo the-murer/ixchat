@@ -15,6 +15,7 @@ interface Message {
 interface User {
   _id: string;
   name: string;
+  active: boolean;
   email: string;
 }
 
@@ -23,10 +24,9 @@ interface MessageListProps {
   userId: string;
   handleSendMessage: (message: string) => void; // ajuste conforme necessário
   chatUser: User;
-  onlineUsers: User[];
 }
 
-const MessageList: React.FC<MessageListProps> = ({ messages, userId, handleSendMessage, chatUser, onlineUsers }) => {
+const MessageList: React.FC<MessageListProps> = ({ messages, userId, handleSendMessage, chatUser }) => {
   const [input, setInput] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -54,7 +54,7 @@ const MessageList: React.FC<MessageListProps> = ({ messages, userId, handleSendM
       </Container>
     );
   }
-  const online = onlineUsers.map((o: any) => o.userId).includes(chatUser._id)
+  const online = chatUser?.active;
   return (
     <Container className="sm-9">
       <h2>

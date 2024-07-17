@@ -17,14 +17,15 @@ type Token ={
 type User = {
   _id: string;
   name: string;
+  active: boolean;
   email: string;
-  }
+}
 
 const getMessages = async (nc: any, chatId: string) => {
   const jc = JSONCodec();
   const sc = StringCodec();
-  if (!nc) throw new Error("NATS connection failed");
   const req = await nc.request("messages", sc.encode(chatId));  
+  if (!req) return [{} as any];
   const messages :any = jc.decode(req.data);
   return messages;
 }
@@ -32,10 +33,18 @@ const getMessages = async (nc: any, chatId: string) => {
 const getChats = async (nc: any, userId: string) => {
   const jc = JSONCodec();
   const sc = StringCodec();
-  if (!nc) throw new Error("NATS connection failed");
   const req = await nc.request("chats", sc.encode(userId));  
+  if (!req) return [{} as any];
   const chats :any = jc.decode(req.data);
   return chats;
+};
+
+const getUsers = async (natsClient: any) => {
+  const jc = JSONCodec();
+  const reponse = await natsClient.request("users");
+  if (!reponse) return [{} as User];
+  const users = jc.decode(reponse.data) as [User];
+  return users;
 };
 
 const handleMessages = (notification: any, setChat: any, setNotifications: any, setMessages: any) => {
@@ -57,11 +66,15 @@ const handleChats = (notification: any, setChats: any, userId: any) => {
   }
 }
 
+const handleStatusChange = (notification: any, setUsers: any) => {
+  setUsers((prevUsers: any) => [...prevUsers.map((user: User) => user._id === notification.userId ? { ...user, active: notification.online === true } : user)]);
+}
+
 const ChatInterface = () => {
   const [activeChat, setChat] = useState('');  
-  const [chatUser, setUser] = useState({} as User);
+  const [chatUser, setChatUser] = useState({} as User);
   const [chats, setChats] = useState([] as any);
-  const [onlineUsers] = useState([]);
+  const [users, setUsers] = useState([] as any);
   const [messages, setMessages] = useState([{} as any]);
   const [natsClient, setNatsClient] = useState({} as any);
   const [notifications, setNotifications] = useState([{} as any]);
@@ -79,10 +92,13 @@ const ChatInterface = () => {
     const fetchServers = async () => {
       
       const jc = JSONCodec();
+      const sc = StringCodec();
       const notiftSub = natsClient.subscribe("notifications");
-      
+
       const responseChats = await getChats(natsClient, userId || "");
       setChats(responseChats);
+      const responseUsers = await getUsers(natsClient);
+      setUsers(responseUsers);
       (async () => {
         for await (const m of notiftSub) {
           const notification : any = jc.decode(m.data);
@@ -92,10 +108,24 @@ const ChatInterface = () => {
         if (notification.type === 'chat') {
           handleChats(notification, setChats, userId);
         }
+        if (notification.type === 'status') {
+          handleStatusChange(notification, setUsers);
+        }
       }
-      })()  
+      })();
+      natsClient.publish('online', sc.encode(userId));  
     };
     fetchServers();
+  }, [natsClient]);
+
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      natsClient.publish('offline', StringCodec().encode(userId));
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
   }, [natsClient]);
 
   const createChat = async (user: any) => {
@@ -111,7 +141,7 @@ const ChatInterface = () => {
 
         setChat(existingChat._id);
         setMessages(_.orderBy(messages, 'createdAt', 'asc'));
-        setUser(user);
+        setChatUser(user);
         return;
       }
     }
@@ -123,7 +153,7 @@ const ChatInterface = () => {
 
       setMessages([]);
       setChat(chat._id);
-      setUser(user);
+      setChatUser(user);
     } catch (error) {
       console.error(error);
     }
@@ -139,14 +169,20 @@ const ChatInterface = () => {
   return (
     <Container style={{ height: "80vh", width: "200vw", backgroundColor: "white", padding: "20px", borderRadius: "10px" }}>
       <div style={{ display: "flex", flexDirection: "row" }}>
-        <Chats natsClient={natsClient} chats={chats} notifications={notifications} onlineUsers={onlineUsers} createChat={createChat} />
+        <Chats 
+          natsClient={natsClient} 
+          chats={chats} 
+          notifications={notifications} 
+          createChat={createChat}
+          users={users}
+         />
         <MessageList
-         key={activeChat}
-         messages={messages} 
-         userId={userId} 
-         chatUser={chatUser}
-         onlineUsers={onlineUsers} 
-         handleSendMessage={handleSendMessage} />
+          key={activeChat}
+          messages={messages} 
+          userId={userId} 
+          chatUser={chatUser}
+          handleSendMessage={handleSendMessage} 
+        />
       </div>
     </Container>
   );
