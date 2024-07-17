@@ -1,8 +1,10 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { Form, Col, Container } from "react-bootstrap";
 import { useAuth } from "../contexts/auth_context";
-import { FormEvent, useState } from "react";
+import React, { FormEvent, useEffect, useState } from "react";
 import { Button } from "@mui/material";
+import { JSONCodec } from "nats.ws";
+import { nats } from "../contexts/auth_context";
 
 
 export default function Register() {
@@ -11,8 +13,16 @@ export default function Register() {
     const [password, setPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
     const [error, setError] = useState("");
+    const [natsClient, setNatsClient] = useState({} as any);
 
-    const { registerUser } = useAuth();
+    const { storeUser } = useAuth();
+
+    useEffect(() => {
+      const setClient = async () => {
+        setNatsClient(await nats());
+      }
+      setClient()
+    }, []);
 
     const submit = async (e: FormEvent<HTMLFormElement>) => {
         e.preventDefault();
@@ -25,9 +35,14 @@ export default function Register() {
             return;
         }
         try{
-            await registerUser(e,{ name, email, password } as any);
+            const jc = JSONCodec();
+            const reponse = await natsClient.request("user:create", jc.encode({ name, email, password, type: 'create' } as any));
+            const user: any = jc.decode(reponse.data);
+            storeUser(user);
+
             window.location.reload();
         } catch (error) {
+            console.log('🚀 ~ error:', error);
             if (error instanceof Error) {
                 setError(error.message);
               } else {

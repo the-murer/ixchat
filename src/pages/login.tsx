@@ -1,5 +1,5 @@
 import { Form, Col, Container } from "react-bootstrap";
-import {  FormEvent, useState } from "react";
+import React, {  FormEvent, useState } from "react";
 
 import { useAuth } from "../contexts/auth_context.tsx";
 import { Button, Grid, Link } from "@mui/material";
@@ -12,7 +12,6 @@ export default function Login() {
 
     const submit = async (e: FormEvent<HTMLFormElement>) => {
 
-        console.log("🚀 ~ submit ~ email, password:", email, password)
         try{
             await login(e,{ email, password });
             window.location.reload();

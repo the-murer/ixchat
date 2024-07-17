@@ -1,9 +1,14 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { createContext, useCallback, useState, useEffect, ReactNode, FormEvent, useContext } from "react";
 import axios, { AxiosResponse } from "axios";
+import { jwtDecode } from "jwt-decode";
+import { connect } from "nats.ws";
+import moment from "moment";
 
 const apiUrl = 'http://localhost:5005';
-const socketUrl = 'http://localhost:5001';
+const servers = [{ 
+  servers: "ws://localhost:3222",
+}];
 
 interface LoginData { email: string; password: string }
 
@@ -15,9 +20,22 @@ interface User {
   email: string;
 }
 
+type UserResponse = {
+  _id: string;
+  name: string;
+  email: string;
+  token: string;
+};
+
+type Decoded = {
+  _id: string;
+  exp: string;
+  iat: string;
+};
+
 interface AuthContextProps {
   user: User | null;
-  registerUser: (e: FormEvent<HTMLFormElement>, registerInfo: User) => Promise<void>;
+  storeUser: (registerInfo: UserResponse) => void;
   login: (e: FormEvent<HTMLFormElement>, loginInfo: LoginData) => Promise<void>;
   logout: () => void;
 }
@@ -29,13 +47,17 @@ const AuthContextProvider: React.FC<AuthContextProviderProps> = ({ children }): 
 
   useEffect(() => {
     const fetchUser = async () => {
-      const userId = localStorage.getItem("userId");
+      const token : Decoded = jwtDecode(localStorage.getItem("token") as string);
+      if (moment(new Date(parseFloat(token.exp) * 1000)).isBefore(moment())) {
+        logout();
+      }
+      const userId = token?._id;
       if (userId) {
         try {
           const response: AxiosResponse<User> = await axios.get(`${apiUrl}/users/get/${userId}`);
           setUser(response.data);
         } catch (error) {
-          console.log("🚀 ~ fetchUser ~ error:", error)
+          console.error("🚀 ~ fetchUser:", error)
           logout();
         }
       }
@@ -43,15 +65,13 @@ const AuthContextProvider: React.FC<AuthContextProviderProps> = ({ children }): 
     fetchUser();
   }, []);
 
-  const registerUser = useCallback(
-    async (e: FormEvent<HTMLFormElement>, registerInfo: any) => {
-      e.preventDefault();
+  const storeUser = useCallback(
+    async (user: UserResponse) => {
       try {
-        const response: any = await axios.post(`${apiUrl}/users/register`, registerInfo);
-        const userId = response.data._id;
-        localStorage.setItem("userId", userId);
-        setUser(response.data);
+        localStorage.setItem("token", user.token);
+        setUser(user);
       } catch (error) {
+        setUser(null);
         console.error(error);
       }
     },
@@ -62,10 +82,10 @@ const AuthContextProvider: React.FC<AuthContextProviderProps> = ({ children }): 
     async (e: FormEvent<HTMLFormElement>, loginInfo: LoginData) => {
       e.preventDefault();
       try {
-        const response: AxiosResponse<User> = await axios.post(`${apiUrl}/users/login`, loginInfo);
-        const userId = response.data._id;
+        const response: AxiosResponse<UserResponse> = await axios.post(`${apiUrl}/users/login`, loginInfo);
+        const token = response.data.token;
 
-        localStorage.setItem("userId", userId);
+        localStorage.setItem("token", token);
         setUser(response.data);
       } catch (error) {
         console.error(error);
@@ -75,15 +95,25 @@ const AuthContextProvider: React.FC<AuthContextProviderProps> = ({ children }): 
   );
 
   const logout = useCallback(() => {
-    localStorage.removeItem("userId");
+    localStorage.removeItem("token");
     setUser(null);
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, registerUser, login, logout }}>
+    <AuthContext.Provider value={{ user, login, logout, storeUser }}>
       {children}
     </AuthContext.Provider>
   );
+};
+
+const nats = async () => {
+  try {
+      const nc = await connect(servers[0]);
+      return (nc);
+  } catch (err) {
+      console.error("error connecting to", err);
+    }
+
 };
 
 const useAuth = (): AuthContextProps => {
@@ -94,4 +124,4 @@ const useAuth = (): AuthContextProps => {
   return context;
 };
 
-export { AuthContextProvider, useAuth, apiUrl, socketUrl };
+export { AuthContextProvider, useAuth, apiUrl, nats };

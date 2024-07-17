@@ -1,4 +1,4 @@
-import { Nav, Navbar } from "react-bootstrap";
+import React, { Nav, Navbar } from "react-bootstrap";
 
 export default function NavbarComponent() {
   const logout = () => {

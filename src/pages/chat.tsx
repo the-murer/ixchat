@@ -1,83 +1,97 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Container } from "@mui/material";
 import axios from "axios";
 import _ from 'lodash';
-import io from 'socket.io-client';
+import { JSONCodec } from "nats.ws";
 
 import Chats from "../components/chats_list";
 import MessageList from "../components/message_list";
-import { apiUrl, socketUrl } from "../contexts/auth_context";
+import { apiUrl, nats } from "../contexts/auth_context";
+import { jwtDecode } from "jwt-decode";
+
+type Token ={
+  _id: string;
+  exp: string;
+  iat: string;
+}
+type User = {
+  _id: string;
+  name: string;
+  email: string;
+  }
 
 const getMessages = async (chatId: string) => {
   const response = await axios.get(`${apiUrl}/messages/${chatId}`);
   return response.data;
 }
 
+const getChats = async (userId: string) => {
+  const response = await axios.get(`${apiUrl}/chats/${userId}`);
+  return response.data;
+};
+
+const handleMessages = (notification: any, setChat: any, setNotifications: any, setMessages: any) => {
+  const newMessage = notification._doc;
+  setChat((prevActiveChat: any) => {
+    if (prevActiveChat !== newMessage.chatId) {
+      setNotifications((prevNotif: [any]) => [...prevNotif, { chatId: newMessage.chatId, isRead: false }]);
+    } else {
+      setMessages((prevMessages: [any]) => _.uniqBy([...prevMessages, newMessage], '_id'));
+    }
+    return prevActiveChat;
+  });
+}
+
+const handleChats = (notification: any, setChats: any, userId: any) => {
+  const newChat = notification._doc;
+  if (newChat.participants.includes(userId)) {
+    setChats((prevActiveChat: [any]) => _.uniqBy([...prevActiveChat, newChat], '_id'));
+  }
+}
+
 const ChatInterface = () => {
   const [activeChat, setChat] = useState('');  
-  const userId = localStorage.getItem("userId") as string;
-  const [chatUser, setUser] = useState({} as any);
-  const [socket, setSocket] = useState({} as any);
-  const [onlineUsers, setOnlineUsers] = useState([]);
+  const [chatUser, setUser] = useState({} as User);
+  const [chats, setChats] = useState([] as any);
+  const [onlineUsers] = useState([]);
   const [messages, setMessages] = useState([{} as any]);
-  const [lastMessage, setLastMessage] = useState({} as any);
+  const [natsClient, setNatsClient] = useState({} as any);
   const [notifications, setNotifications] = useState([{} as any]);
+  const userId = (jwtDecode(localStorage.getItem("token") as string) as Token)._id;
 
   useEffect(() => {
-    const socketInstance = io(socketUrl);
-
-    socketInstance.on('connect', () => { console.log('Conectado ao servidor'); });
-    setSocket(socketInstance);
-
-    return () => {
-      socketInstance.disconnect();
-      console.log('Desconectado do servidor');
-    };
+    const setClient = async () => {
+      setNatsClient(await nats());
+    }
+    setClient()
   }, []);
 
   useEffect(() => {
-    if (!socket?.connected) return;
-
-    socket.emit("addNewUser", userId);
-    socket.on("getUsers", (users: any) => { setOnlineUsers(users); });
-
-    return () => {
-      socket.off("getUsers");
-    };
-  }, [socket, userId]);
-
-  useEffect(() => {
-    if (!socket?.connected || !lastMessage) return;
-
-    socket.emit("sendMessage", { ...lastMessage, receiverId: chatUser._id });
-  }, [lastMessage, socket, chatUser]);
-
-  useEffect(() => {
-    if (!socket?.connected) return;
-
-    socket.on("getMessage", (message: any) => {
-      if (activeChat === message.chatId) {
-        setMessages((prev) => [...prev, message]);
+    if (!natsClient.options) return
+    const fetchServers = async () => {
+      
+      const jc = JSONCodec();
+      const notiftSub = natsClient.subscribe("notifications");
+      
+      const responseChats = await getChats(userId || "");
+      setChats(responseChats);
+      (async () => {
+        for await (const m of notiftSub) {
+          const notification : any = jc.decode(m.data);
+          if (notification.type === 'message') {
+            handleMessages(notification, setChat, setNotifications, setMessages);
+        }
+        if (notification.type === 'chat') {
+          handleChats(notification, setChats, userId);
+        }
       }
-    });
-
-    socket.on("getNotification", (notification : any) => {
-    
-      if (chatUser._id === notification.senderId) {
-        setNotifications((prev) => [{ ...notification, isRead: true }, ...prev]);
-      } else {
-        setNotifications((prev) => [notification, ...prev]);
-      }
-    });
-
-    return () => {
-      socket.off("getMessage");
-      socket.off("getNotification");
+      })()  
     };
-  }, [socket, activeChat, chatUser]);
+    fetchServers();
+  }, [natsClient]);
 
-  const createChat = async (user: any, chats: any) => {
+  const createChat = async (user: any) => {
     if (!user) return;
     const receiverId = user._id;
     if (userId && chats.length > 0) {
@@ -95,11 +109,13 @@ const ChatInterface = () => {
       }
     }
     try {
-      const response = await axios.post(`${apiUrl}/chats/create`, { userId, receiverId });
-      const data = response.data;
       
+      const jc = JSONCodec();
+      const reponse = await natsClient.request("chat:create", jc.encode({ userId, receiverId }));
+      const chat: any = jc.decode(reponse.data);
+
       setMessages([]);
-      setChat(data._id);
+      setChat(chat._id);
       setUser(user);
     } catch (error) {
       console.error(error);
@@ -107,17 +123,16 @@ const ChatInterface = () => {
   };
 
   const handleSendMessage = async (message: any) => {
-    const messageObj = { chatId: activeChat, userId, content: message };
-    const response = await axios.post(`${apiUrl}/messages/create`, messageObj);
-
-    setMessages(_.orderBy([ ...messages, response.data ], 'createdAt', 'asc'));
-    setLastMessage(response.data);
+    const jc = JSONCodec();
+    const reponse = await natsClient.request("message:create", jc.encode({ chatId: activeChat, userId, content: message }));
+    const msg = jc.decode(reponse.data);
+    setMessages(prevMessages => [ ...prevMessages, msg ]);
   };
 
   return (
     <Container style={{ height: "80vh", width: "200vw", backgroundColor: "white", padding: "20px", borderRadius: "10px" }}>
       <div style={{ display: "flex", flexDirection: "row" }}>
-        <Chats notifications={notifications} onlineUsers={onlineUsers} createChat={createChat} />
+        <Chats chats={chats} notifications={notifications} onlineUsers={onlineUsers} createChat={createChat} />
         <MessageList
          key={activeChat}
          messages={messages} 

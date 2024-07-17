@@ -1,16 +1,22 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Button, Col, ListGroup } from "react-bootstrap";
 import { FaCircle } from "react-icons/fa";
 import axios from "axios";
 import { CircularProgress } from "@mui/material";
 
 import { apiUrl } from "../contexts/auth_context";
+import { jwtDecode } from "jwt-decode";
 
-interface User {
+type User = {
 _id: string;
 name: string;
 email: string;
+}
+type Token ={
+  _id: string;
+  exp: string;
+  iat: string;
 }
 
 const getUsers = async () => {
@@ -18,31 +24,25 @@ const getUsers = async () => {
     return response.data;
 };
 
-const getChats = async (userId: string) => {
-    const response = await axios.get(`${apiUrl}/chats/${userId}`);
-    return response.data;
-};
-
 interface ChatsProps {
   createChat: (arg: any, arg2: any) => void;
   onlineUsers: any[];
+  chats: any[];
   notifications: any[];
 }
 
-function Chats({ createChat, onlineUsers, notifications }: ChatsProps) {
-    const userId = localStorage.getItem("userId")
-    const [chats, setChats] = useState([]);
-    const [users, setUsers] = useState([]);
-    const [showChats, setChatVisualization] = useState(true);
-    const [loading, setLoading] = useState(true);
+function Chats({ createChat, onlineUsers, notifications, chats }: ChatsProps) {
+  const [users, setUsers] = useState([]);
+  const [user, setUser] = useState({} as User); 
+  const [showChats, setChatVisualization] = useState(true);
+  const [loading, setLoading] = useState(true);
+  const userId = (jwtDecode(localStorage.getItem("token") as string) as Token)._id;
 
     useEffect(() => {
       const fetchData = async () => {
         const response = await getUsers();
-        const responseChats = await getChats(userId?.toString() || "");
-
+        setUser(response.find((user: User) => user._id === userId));
         setUsers(response.filter((user: User) => user._id !== userId));
-        setChats(responseChats);
         setLoading(false);
       };
     
@@ -67,17 +67,21 @@ function Chats({ createChat, onlineUsers, notifications }: ChatsProps) {
             </Button>
           </div>
           <hr />
+          {!!user?.name && 
+          (<div style={{ display: "flex", justifyContent: "center", alignItems: "center", marginTop: "5px" }}>
+           {`Logado como ${user?.name}`}
+          </div>)}
           <ListGroup variant="flush" className="sidebar-list">
-            {showChats ? chats.map((chat: any) => {
-              const participantId = chat.participants.find((p: string) => p !== userId);
+            {showChats && chats ? chats.map((chat: any) => {
+              const participantId = chat?.participants?.find((p: string) => p !== userId);
               const user: any = users.find((user: User) => user._id === participantId);
               const online = onlineUsers.map((o: any) => o.userId).includes(participantId);
               const newMessage = notifications.find((n: any) => n.chatId === chat._id)?.isRead === false; 
               return (
-                <ListGroup.Item  key={chat.id} className="list-item" style={{ display: "flex", padding: "10px", justifyContent: "space-between" }} >
+                <ListGroup.Item  key={chat.participants.join(':')} className="list-item" style={{ display: "flex", padding: "10px", justifyContent: "space-between" }} >
                   <div style={{ display: "flex", flexDirection: "column" }}>
                     <h6>
-                      {online ? <FaCircle style={{ color: "green" }} /> : <FaCircle style={{ color: "gray" }} />}{` ${user.name}`}
+                      {online ? <FaCircle style={{ color: "green" }} /> : <FaCircle style={{ color: "gray" }} />}{` ${user?.name}`}
                     </h6>
                     {newMessage ? <p>Nova(s) mensagens</p> : null}
                   </div>

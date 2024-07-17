@@ -6,7 +6,7 @@ import Login from "./pages/login";
 import { Container } from "react-bootstrap";
 import NavbarComponent from "./components/navbar";
 import Register from "./pages/register";
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { AuthContextProvider } from "./contexts/auth_context.tsx";
 import Chat from "./pages/chat.tsx";
 
@@ -15,7 +15,7 @@ const App: React.FC = () => {
 
   useEffect(() => {
     const checkUser = async () => {
-      const userId = localStorage.getItem("userId");
+      const userId = localStorage.getItem("token");
       if (userId) {
         setAuthenticated(true);
       }
