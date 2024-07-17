@@ -1,28 +1,58 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Form, Col, Container } from "react-bootstrap";
-import React, {  FormEvent, useState } from "react";
+import React, {  FormEvent, useEffect, useState } from "react";
 
-import { useAuth } from "../contexts/auth_context.tsx";
+import { nats, useAuth } from "../contexts/auth_context.tsx";
 import { Button, Grid, Link } from "@mui/material";
+import  { JSONCodec } from "nats.ws";
+
+type UserResponse = {
+  _id: string;
+  name: string;
+  email: string;
+  token: string;
+}
 
 export default function Login() {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [error, setError] = useState("");
-    const { login } = useAuth();
+    const [natsClient, setNatsClient] = useState({} as any);
+    const { storeUser } = useAuth();
 
-    const submit = async (e: FormEvent<HTMLFormElement>) => {
 
-        try{
-            await login(e,{ email, password });
-            window.location.reload();
-        } catch (error) {
-            if (error instanceof Error) {
-                setError(error.message);
-              } else {
-                console.error('Erro desconhecido', error);
-              }
+    useEffect(() => {
+        const setClient = async () => {
+          setNatsClient(await nats());
         }
-    };
+        setClient()
+      }, []);
+  
+      const submit = async (e: FormEvent<HTMLFormElement>) => {
+          e.preventDefault();
+          if (!email || !password) {
+              setError("Informações faltantes, verifique!");
+              return;
+          }
+
+          try{
+              const jc = JSONCodec();
+              const reponse = await natsClient.request("user:login", jc.encode({ email, password, type: 'login' }));
+              if (!reponse) return;
+              const user = jc.decode(reponse.data) as UserResponse;
+              if (user) {
+                storeUser(user);
+                window.location.reload();
+              }
+          } catch (error) {
+              console.log('🚀 ~ error:', error);
+              if (error instanceof Error) {
+                  setError(error.message);
+                } else {
+                  console.error('Erro desconhecido', error);
+                }
+          }
+      };
 
     return (
         <Container style={{ maxWidth: "500px", backgroundColor: "white", padding: "20px", borderRadius: "10px" }} className="sm-6">

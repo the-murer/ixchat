@@ -1,13 +1,12 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useEffect, useState } from "react";
 import { Container } from "@mui/material";
-import axios from "axios";
 import _ from 'lodash';
-import { JSONCodec } from "nats.ws";
+import { JSONCodec, StringCodec } from "nats.ws";
 
 import Chats from "../components/chats_list";
 import MessageList from "../components/message_list";
-import { apiUrl, nats } from "../contexts/auth_context";
+import { nats } from "../contexts/auth_context";
 import { jwtDecode } from "jwt-decode";
 
 type Token ={
@@ -21,14 +20,22 @@ type User = {
   email: string;
   }
 
-const getMessages = async (chatId: string) => {
-  const response = await axios.get(`${apiUrl}/messages/${chatId}`);
-  return response.data;
+const getMessages = async (nc: any, chatId: string) => {
+  const jc = JSONCodec();
+  const sc = StringCodec();
+  if (!nc) throw new Error("NATS connection failed");
+  const req = await nc.request("messages", sc.encode(chatId));  
+  const messages :any = jc.decode(req.data);
+  return messages;
 }
 
-const getChats = async (userId: string) => {
-  const response = await axios.get(`${apiUrl}/chats/${userId}`);
-  return response.data;
+const getChats = async (nc: any, userId: string) => {
+  const jc = JSONCodec();
+  const sc = StringCodec();
+  if (!nc) throw new Error("NATS connection failed");
+  const req = await nc.request("chats", sc.encode(userId));  
+  const chats :any = jc.decode(req.data);
+  return chats;
 };
 
 const handleMessages = (notification: any, setChat: any, setNotifications: any, setMessages: any) => {
@@ -74,7 +81,7 @@ const ChatInterface = () => {
       const jc = JSONCodec();
       const notiftSub = natsClient.subscribe("notifications");
       
-      const responseChats = await getChats(userId || "");
+      const responseChats = await getChats(natsClient, userId || "");
       setChats(responseChats);
       (async () => {
         for await (const m of notiftSub) {
@@ -97,7 +104,7 @@ const ChatInterface = () => {
     if (userId && chats.length > 0) {
       const existingChat = chats.find((chat: any) => chat.participants.includes(receiverId));
       if (existingChat) {
-        const messages = await getMessages(existingChat._id);
+        const messages = await getMessages(natsClient, existingChat._id);
         if (notifications.length > 0) {
           setNotifications((prev) => prev.filter(notification => notification.chatId !== existingChat._id));
         }
@@ -132,7 +139,7 @@ const ChatInterface = () => {
   return (
     <Container style={{ height: "80vh", width: "200vw", backgroundColor: "white", padding: "20px", borderRadius: "10px" }}>
       <div style={{ display: "flex", flexDirection: "row" }}>
-        <Chats chats={chats} notifications={notifications} onlineUsers={onlineUsers} createChat={createChat} />
+        <Chats natsClient={natsClient} chats={chats} notifications={notifications} onlineUsers={onlineUsers} createChat={createChat} />
         <MessageList
          key={activeChat}
          messages={messages} 

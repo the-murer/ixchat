@@ -2,16 +2,15 @@
 import React, { useEffect, useState } from "react";
 import { Button, Col, ListGroup } from "react-bootstrap";
 import { FaCircle } from "react-icons/fa";
-import axios from "axios";
 import { CircularProgress } from "@mui/material";
 
-import { apiUrl } from "../contexts/auth_context";
 import { jwtDecode } from "jwt-decode";
+import { JSONCodec } from "nats.ws";
 
 type User = {
-_id: string;
-name: string;
-email: string;
+  _id: string;
+  name: string;
+  email: string;
 }
 type Token ={
   _id: string;
@@ -19,9 +18,12 @@ type Token ={
   iat: string;
 }
 
-const getUsers = async () => {
-    const response = await axios.get(`${apiUrl}/users/list`);
-    return response.data;
+const getUsers = async (natsClient: any) => {
+  const jc = JSONCodec();
+  const reponse = await natsClient.request("users");
+  if (!reponse) return [{} as User];
+  const users = jc.decode(reponse.data) as [User];
+  return users;
 };
 
 interface ChatsProps {
@@ -29,10 +31,11 @@ interface ChatsProps {
   onlineUsers: any[];
   chats: any[];
   notifications: any[];
+  natsClient: any;
 }
 
-function Chats({ createChat, onlineUsers, notifications, chats }: ChatsProps) {
-  const [users, setUsers] = useState([]);
+function Chats({ createChat, onlineUsers, notifications, chats, natsClient }: ChatsProps) {
+  const [users, setUsers] = useState([] as User[]);
   const [user, setUser] = useState({} as User); 
   const [showChats, setChatVisualization] = useState(true);
   const [loading, setLoading] = useState(true);
@@ -40,14 +43,16 @@ function Chats({ createChat, onlineUsers, notifications, chats }: ChatsProps) {
 
     useEffect(() => {
       const fetchData = async () => {
-        const response = await getUsers();
-        setUser(response.find((user: User) => user._id === userId));
-        setUsers(response.filter((user: User) => user._id !== userId));
+        const response = await getUsers(natsClient);
+        const currentUser = response.find((user: User) => user._id === userId);
+        if (currentUser) setUser(currentUser);
+        const filteredUsers = response.filter((user: User) => user._id !== userId);
+        if (filteredUsers.length) setUsers(filteredUsers);
         setLoading(false);
       };
-    
+      if (!natsClient.request) return;
       fetchData();
-    }, []);
+    }, [natsClient]);
     
 
     if (loading) {

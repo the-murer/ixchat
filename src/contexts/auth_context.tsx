@@ -1,8 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React, { createContext, useCallback, useState, useEffect, ReactNode, FormEvent, useContext } from "react";
-import axios, { AxiosResponse } from "axios";
+import React, { createContext, useCallback, useState, useEffect, ReactNode, useContext } from "react";
 import { jwtDecode } from "jwt-decode";
-import { connect } from "nats.ws";
+import { connect, JSONCodec, StringCodec } from "nats.ws";
 import moment from "moment";
 
 const apiUrl = 'http://localhost:5005';
@@ -10,7 +9,6 @@ const servers = [{
   servers: "ws://localhost:3222",
 }];
 
-interface LoginData { email: string; password: string }
 
 interface AuthContextProviderProps { children: ReactNode }
 
@@ -36,16 +34,27 @@ type Decoded = {
 interface AuthContextProps {
   user: User | null;
   storeUser: (registerInfo: UserResponse) => void;
-  login: (e: FormEvent<HTMLFormElement>, loginInfo: LoginData) => Promise<void>;
   logout: () => void;
 }
 
 const AuthContext = createContext<AuthContextProps | undefined>(undefined);
 
+const nats = async () => {
+  try {
+      const nc = await connect(servers[0]);
+      return (nc);
+  } catch (err) {
+      console.error("error connecting to", err);
+    }
+};
+
 const AuthContextProvider: React.FC<AuthContextProviderProps> = ({ children }): JSX.Element => {
   const [user, setUser] = useState<User | null>(null);
+  
 
   useEffect(() => {
+    const sc = StringCodec();
+    const jc = JSONCodec();
     const fetchUser = async () => {
       const token : Decoded = jwtDecode(localStorage.getItem("token") as string);
       if (moment(new Date(parseFloat(token.exp) * 1000)).isBefore(moment())) {
@@ -54,8 +63,11 @@ const AuthContextProvider: React.FC<AuthContextProviderProps> = ({ children }): 
       const userId = token?._id;
       if (userId) {
         try {
-          const response: AxiosResponse<User> = await axios.get(`${apiUrl}/users/get/${userId}`);
-          setUser(response.data);
+          const nc = await nats();
+          if (!nc) throw new Error("NATS connection failed");
+          const req = await nc.request("user", sc.encode(userId));  
+          const user = jc.decode(req.data) as User;
+          setUser(user);
         } catch (error) {
           console.error("🚀 ~ fetchUser:", error)
           logout();
@@ -78,42 +90,16 @@ const AuthContextProvider: React.FC<AuthContextProviderProps> = ({ children }): 
     []
   );
 
-  const login = useCallback(
-    async (e: FormEvent<HTMLFormElement>, loginInfo: LoginData) => {
-      e.preventDefault();
-      try {
-        const response: AxiosResponse<UserResponse> = await axios.post(`${apiUrl}/users/login`, loginInfo);
-        const token = response.data.token;
-
-        localStorage.setItem("token", token);
-        setUser(response.data);
-      } catch (error) {
-        console.error(error);
-      }
-    },
-    []
-  );
-
   const logout = useCallback(() => {
     localStorage.removeItem("token");
     setUser(null);
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, storeUser }}>
+    <AuthContext.Provider value={{ user, logout, storeUser }}>
       {children}
     </AuthContext.Provider>
   );
-};
-
-const nats = async () => {
-  try {
-      const nc = await connect(servers[0]);
-      return (nc);
-  } catch (err) {
-      console.error("error connecting to", err);
-    }
-
 };
 
 const useAuth = (): AuthContextProps => {
