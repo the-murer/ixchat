@@ -65,7 +65,7 @@ const AuthContextProvider: React.FC<AuthContextProviderProps> = ({ children }): 
         try {
           const nc = await nats();
           if (!nc) throw new Error("NATS connection failed");
-          const req = await nc.request("user", sc.encode(userId));  
+          const req = await nc.request("user.find-one", sc.encode(userId));  
           const user = jc.decode(req.data) as User;
           setUser(user);
         } catch (error) {

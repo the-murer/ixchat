@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { Container } from "@mui/material";
 import _ from 'lodash';
-import { JSONCodec, StringCodec } from "nats.ws";
+import { JSONCodec } from "nats.ws";
 
 import Chats from "../components/chats_list";
 import MessageList from "../components/message_list";
@@ -10,7 +10,8 @@ import { nats } from "../contexts/auth_context";
 import { jwtDecode } from "jwt-decode";
 
 type Token ={
-  _id: string;
+  sub: string;
+  name: string;
   exp: string;
   iat: string;
 }
@@ -23,17 +24,16 @@ type User = {
 
 const getMessages = async (nc: any, chatId: string) => {
   const jc = JSONCodec();
-  const sc = StringCodec();
-  const req = await nc.request("messages", sc.encode(chatId));  
+  const req = await nc.request("message.find-by-chat", jc.encode({ chatId }));  
   if (!req) return [{} as any];
   const messages :any = jc.decode(req.data);
   return messages;
 }
 
 const getChats = async (nc: any, userId: string) => {
+  console.log('🚀 ~ userId:', userId);
   const jc = JSONCodec();
-  const sc = StringCodec();
-  const req = await nc.request("chats", sc.encode(userId));  
+  const req = await nc.request("chat.find-by-user", jc.encode({ userId }));
   if (!req) return [{} as any];
   const chats :any = jc.decode(req.data);
   return chats;
@@ -41,7 +41,7 @@ const getChats = async (nc: any, userId: string) => {
 
 const getUsers = async (natsClient: any) => {
   const jc = JSONCodec();
-  const reponse = await natsClient.request("users");
+  const reponse = await natsClient.request("user.find-all", jc.encode({}));
   if (!reponse) return [{} as User];
   const users = jc.decode(reponse.data) as [User];
   return users;
@@ -61,13 +61,13 @@ const handleMessages = (notification: any, setChat: any, setNotifications: any, 
 
 const handleChats = (notification: any, setChats: any, userId: any) => {
   const newChat = notification._doc;
-  if (newChat.participants.includes(userId)) {
+  if (newChat.participants.map((p: any) => p.userId).includes(userId)) {
     setChats((prevActiveChat: [any]) => _.uniqBy([...prevActiveChat, newChat], '_id'));
   }
 }
 
 const handleStatusChange = (notification: any, setUsers: any) => {
-  setUsers((prevUsers: any) => [...prevUsers.map((user: User) => user._id === notification.userId ? { ...user, active: notification.online === true } : user)]);
+  setUsers((prevUsers: any) => [...prevUsers.map((user: User) => user._id === notification.userId ? { ...user, active: notification.online } : user)]);
 }
 
 const ChatInterface = () => {
@@ -78,7 +78,8 @@ const ChatInterface = () => {
   const [messages, setMessages] = useState([{} as any]);
   const [natsClient, setNatsClient] = useState({} as any);
   const [notifications, setNotifications] = useState([{} as any]);
-  const userId = (jwtDecode(localStorage.getItem("token") as string) as Token)._id;
+  const userId = (jwtDecode(localStorage.getItem("token") as string) as Token).sub;
+  const userName = (jwtDecode(localStorage.getItem("token") as string) as Token).name;
 
   useEffect(() => {
     const setClient = async () => {
@@ -92,7 +93,6 @@ const ChatInterface = () => {
     const fetchServers = async () => {
       
       const jc = JSONCodec();
-      const sc = StringCodec();
       const notiftSub = natsClient.subscribe("notifications");
 
       const responseChats = await getChats(natsClient, userId || "");
@@ -113,14 +113,14 @@ const ChatInterface = () => {
         }
       }
       })();
-      natsClient.publish('online', sc.encode(userId));  
+      natsClient.publish('user.status', jc.encode({ userId, online: true }));  
     };
     fetchServers();
   }, [natsClient]);
 
   useEffect(() => {
     const handleBeforeUnload = () => {
-      natsClient.publish('offline', StringCodec().encode(userId));
+      natsClient.publish('user.status', JSONCodec().encode({ userId, online: false }));
     };
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => {
@@ -132,7 +132,7 @@ const ChatInterface = () => {
     if (!user) return;
     const receiverId = user._id;
     if (userId && chats.length > 0) {
-      const existingChat = chats.find((chat: any) => chat.participants.includes(receiverId));
+      const existingChat = chats.find((chat: any) => chat.participants.map((p: any) => p.userId).includes(receiverId));
       if (existingChat) {
         const messages = await getMessages(natsClient, existingChat._id);
         if (notifications.length > 0) {
@@ -148,7 +148,11 @@ const ChatInterface = () => {
     try {
       
       const jc = JSONCodec();
-      const reponse = await natsClient.request("chat:create", jc.encode({ userId, receiverId }));
+      const reponse = await natsClient.request("chat.create", jc.encode({ 
+        participants: [
+          { userId, userName }, 
+          { userId: receiverId, userName: user.name}] 
+      }));  
       const chat: any = jc.decode(reponse.data);
 
       setMessages([]);
@@ -161,7 +165,7 @@ const ChatInterface = () => {
 
   const handleSendMessage = async (message: any) => {
     const jc = JSONCodec();
-    const reponse = await natsClient.request("message:create", jc.encode({ chatId: activeChat, userId, content: message }));
+    const reponse = await natsClient.request("message.create", jc.encode({ chatId: activeChat, userId, content: message }));
     const msg = jc.decode(reponse.data);
     setMessages(prevMessages => [ ...prevMessages, msg ]);
   };

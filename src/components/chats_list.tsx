@@ -12,7 +12,8 @@ type User = {
   email: string;
 }
 type Token ={
-  _id: string;
+  sub: string;
+  name: string;
   exp: string;
   iat: string;
 }
@@ -27,7 +28,7 @@ interface ChatsProps {
 
 function Chats({ createChat, notifications, chats, users }: ChatsProps) {
   const [showChats, setChatVisualization] = useState(true);
-  const userId = (jwtDecode(localStorage.getItem("token") as string) as Token)._id;
+  const userId = (jwtDecode(localStorage.getItem("token") as string) as Token).sub;
   const user = users.find((user: User) => user._id === userId) as User;
 
     return (
@@ -46,19 +47,19 @@ function Chats({ createChat, notifications, chats, users }: ChatsProps) {
           </div>)}
           <ListGroup variant="flush" className="sidebar-list">
             {showChats && chats ? chats.map((chat: any) => {
-              const participantId = chat?.participants?.find((p: string) => p !== userId);
+              const participantId = chat?.participants?.find((p: any) => p.userId !== userId).userId;
               const user = users.find((user: User) => user._id === participantId) as User;
               const online = user?.active;
               const newMessage = notifications.find((n: any) => n.chatId === chat._id)?.isRead === false; 
               return (
-                <ListGroup.Item  key={chat.participants.join(':')} className="list-item" style={{ display: "flex", padding: "10px", justifyContent: "space-between" }} >
+                <ListGroup.Item  key={chat.participants.map((p: any) => p.userId).join(':')} className="list-item" style={{ display: "flex", padding: "10px", justifyContent: "space-between" }} >
                   <div style={{ display: "flex", flexDirection: "column" }}>
                     <h6>
                       {online ? <FaCircle style={{ color: "green" }} /> : <FaCircle style={{ color: "gray" }} />}{` ${user?.name}`}
                     </h6>
                     {newMessage ? <p>Nova(s) mensagens</p> : null}
                   </div>
-                  <Button onClick={() => createChat(user, chats)} variant="outline-primary" size="sm" style={{ marginLeft: "10px" }}>
+                  <Button onClick={() => createChat(user, chats)} variant="outline-primary" size="sm" style={{ marginLeft: "10px", maxHeight: "30px" }}>
                    Ver conversa
                  </Button>
                 </ListGroup.Item>

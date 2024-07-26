@@ -36,7 +36,7 @@ export default function Register() {
         }
         try{
             const jc = JSONCodec();
-            const reponse = await natsClient.request("user:create", jc.encode({ name, email, password, type: 'create' } as any));
+            const reponse = await natsClient.request("user.create", jc.encode({ name, email, password, type: 'create' } as any));
             const user: any = jc.decode(reponse.data);
             storeUser(user);
 

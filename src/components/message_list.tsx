@@ -22,7 +22,7 @@ interface User {
 interface MessageListProps {
   messages: Message[];
   userId: string;
-  handleSendMessage: (message: string) => void; // ajuste conforme necessário
+  handleSendMessage: (message: string) => void;
   chatUser: User;
 }
 
@@ -61,8 +61,8 @@ const MessageList: React.FC<MessageListProps> = ({ messages, userId, handleSendM
         {online ? <FaCircle style={{ color: "green" }} /> : <FaCircle style={{ color: "gray" }} />}
         {chatUser?.name}
         {online 
-        ? <h6 style={{ color: "green", marginLeft: "5px" }}>Online</h6> 
-        : <h6 style={{ color: "gray", marginLeft: "5px" }}>Offline</h6>}
+        ? <p style={{ color: "green", marginLeft: "5px", fontSize: "18px" }}>Online</p>  
+        : <p style={{ color: "gray", marginLeft: "5px", fontSize: "18px" }}>Offline</p>}
       </h2>
       <hr />
       <div style={{ height: '60vh', overflow: 'scroll' }}>

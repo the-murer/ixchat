@@ -37,9 +37,10 @@ export default function Login() {
 
           try{
               const jc = JSONCodec();
-              const reponse = await natsClient.request("user:login", jc.encode({ email, password, type: 'login' }));
+              const reponse = await natsClient.request("user.login", jc.encode({ email, password }));
               if (!reponse) return;
               const user = jc.decode(reponse.data) as UserResponse;
+              console.log('🚀 ~ user:', user);
               if (user) {
                 storeUser(user);
                 window.location.reload();
